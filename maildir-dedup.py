@@ -63,8 +63,11 @@ def maildir_dedup(mbox, dryrun=False):
             # Now collect all the header fields.
             for _, msg in msgs:
                 for key, val in msg.items():
-                    if key in ('X-getmail-retrieved-from-mailbox', 'X-GMAIL-LABELS'):
-                        new_msg[key] = val
+                    if key not in ('X-getmail-retrieved-from-mailbox', 'X-GMAIL-LABELS'):
+                        continue
+                    if (key, val) in new_msg.items():
+                        continue
+                    new_msg[key] = val
 
             print ("Updating message %s:" % (new_key,))
             for key, msg in msgs:
