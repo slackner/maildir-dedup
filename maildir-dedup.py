@@ -12,10 +12,10 @@ def maildir_dedup(mbox, dryrun=False):
     # the X-GMAIL-MSGID header field.
     key_by_msgid = defaultdict(list)
     for key, msg in mbox.items():
-        try:
-            msgid = msg['X-GMAIL-MSGID']
-        except KeyError:
+        msgid = msg['X-GMAIL-MSGID']
+        if msgid is None:
             continue
+
         key_by_msgid[msgid].append(key)
 
     # For any msgid present two or more times, compute hash of the
