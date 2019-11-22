@@ -59,6 +59,7 @@ def maildir_dedup(mbox, dryrun=False):
             # Grab the oldest message, update the timestamp to the newest one.
             new_key, new_msg = msgs.pop(0)
             new_msg.set_date(msgs[-1][1].get_date())
+            changed = False
 
             # Now collect all the header fields.
             for _, msg in msgs:
@@ -68,6 +69,7 @@ def maildir_dedup(mbox, dryrun=False):
                     if (key, val) in new_msg.items():
                         continue
                     new_msg[key] = val
+                    changed = True
 
             print ("Updating message %s:" % (new_key,))
             for key, msg in msgs:
@@ -77,7 +79,10 @@ def maildir_dedup(mbox, dryrun=False):
                 continue
 
             # Update the initial message, delete all the other ones.
-            mbox[new_key] = new_msg
+            # To avoid unnecessary write accesses, only update the file if
+            # anything changed.
+            if changed:
+                mbox[new_key] = new_msg
             for key, _ in msgs:
                 mbox.remove(key)
             mbox.flush()
