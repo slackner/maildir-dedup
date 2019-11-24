@@ -11,7 +11,7 @@ def maildir_dedup(mbox, dryrun=False):
     # Enumerate all messages in the Maildir and group messages by
     # the X-GMAIL-MSGID header field.
     key_by_msgid = defaultdict(list)
-    for key, msg in mbox.items():
+    for key, msg in mbox.iteritems():
         msgid = msg['X-GMAIL-MSGID']
         if msgid is None:
             continue
@@ -71,9 +71,10 @@ def maildir_dedup(mbox, dryrun=False):
                     new_msg[key] = val
                     changed = True
 
-            print ("Updating message %s:" % (new_key,))
+            if changed:
+                print ("Updating message %s" % (new_key,))
             for key, msg in msgs:
-                print ("  * %s" % (key,))
+                print ("Deleting duplicate message %s" % (key,))
 
             if dryrun:
                 continue
