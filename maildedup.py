@@ -5,7 +5,63 @@ import mailbox
 import hashlib
 import copy
 import io
+import os
 from collections import defaultdict
+
+class Maildir(mailbox.Maildir):
+    # The Python mailbox.Maildir implementation does not automatically
+    # update the _toc when messages or added or removed. This leads to
+    # a huge performance drop when working with large Maildirs. As a
+    # workaround, keep the cache up to date by replacing the add() and
+    # remove() functions.
+
+    def add(self, message):
+        key = super().add(message)
+
+        # Add the key to the table of contents.
+        if key not in self._toc:
+            if isinstance(message, mailbox.MaildirMessage):
+                subdir = message.get_subdir()
+                suffix = self.colon + message.get_info()
+                if suffix == self.colon:
+                    suffix = ''
+            else:
+                subdir = 'new'
+                suffix = ''
+
+            dest = os.path.join(self._path, subdir, key + suffix)
+            if os.path.exists(dest):
+                self._toc[key] = os.path.join(subdir, key + suffix)
+
+        return key
+
+    def remove(self, key):
+        super().remove(key)
+
+        # Remove the key from the table of contents.
+        try:
+            del self._toc[key]
+        except KeyError:
+            pass
+
+    def __setitem__(self, key, message):
+        # Replace the key and update the table of contents.
+
+        dest = os.path.join(self._path, self._lookup(key))
+
+        temp_key = self.add(message)
+        temp_path = os.path.join(self._path, self._lookup(temp_key))
+
+        try:
+            os.rename(temp_path, dest)
+        except:
+            self.remove(temp_key)
+            raise
+
+        try:
+            del self._toc[temp_key]
+        except KeyError:
+            pass
 
 def maildir_dedup(mbox, dryrun=False):
     # Enumerate all messages in the Maildir and group messages by
@@ -95,5 +151,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     for path in args.path:
-        mbox = mailbox.Maildir(path, create=False)
+        mbox = Maildir(path, create=False)
         maildir_dedup(mbox, dryrun=args.dryrun)
